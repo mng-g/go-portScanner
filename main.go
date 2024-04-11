@@ -1,11 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"go-portScanner/portformat"
+
+	"github.com/mng-g/go-portScanner/portformat"
 
 	"net"
-	"os"
 	"sort"
 )
 
@@ -22,28 +23,39 @@ func worker(host string, ports, results chan int) {
 	}
 }
 
+var (
+	targetHost  string
+	targetPorts string
+)
+
+func init() {
+	flag.StringVar(&targetHost, "h", "localhost", "The host to scan")
+	flag.StringVar(&targetPorts, "p", "1-1024", "The range of ports to scan")
+	flag.Parse()
+}
+
 func main() {
 
-	targetHost := os.Args[1]
 	ports := make(chan int, 100)
 	results := make(chan int)
 	var openports []int
 
-	var s string = "123"
-	n, _ := portformat.Parse(s)
-	fmt.Println(n)
+	portsList, err := portformat.Parse(targetPorts)
+	if err != nil {
+		fmt.Printf("Error: %+v\n", err)
+	}
 
 	for i := 0; i < cap(ports); i++ {
 		go worker(targetHost, ports, results)
 	}
 
 	go func() {
-		for i := 1; i <= 1024; i++ {
-			ports <- i
+		for _, port := range portsList {
+			ports <- port
 		}
 	}()
 
-	for i := 0; i < 1024; i++ {
+	for i := 0; i < len(portsList); i++ {
 		port := <-results
 		if port != 0 {
 			openports = append(openports, port)
